@@ -3,7 +3,6 @@ import { getTargetNetworks } from "~~/utils/scaffold-stark";
 import { BurnerConnector } from "@scaffold-stark/stark-burner";
 import scaffoldConfig from "~~/scaffold.config";
 import { LAST_CONNECTED_TIME_LOCALSTORAGE_KEY } from "~~/utils/Constants";
-import { KeplrConnector } from "./keplr";
 import { supportedChains } from "~~/supportedChains";
 
 const targetNetworks = getTargetNetworks();
@@ -30,9 +29,7 @@ function getConnectors() {
     (network) => (network.network as string) === "devnet",
   );
 
-  if (!isDevnet) {
-    connectors.push(new KeplrConnector());
-  } else {
+  if (isDevnet) {
     const burnerConnector = new BurnerConnector();
     burnerConnector.chain = supportedChains.devnet;
     connectors.push(burnerConnector as unknown as InjectedConnector);

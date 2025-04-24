@@ -79,4 +79,118 @@ pub mod Counter {
             self.counter.write(0);
         }
     }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use starknet::testing::{set_caller_address};
+        use snforge_std::{declare, ContractClassTrait, start_prank, stop_prank};
+
+        #[test]
+        #[feature("deprecated-starknet-consts")]
+        fn test_counter_initialization() {
+            let owner = starknet::contract_address_const::<0x123>();
+            let init_value = 42;
+            
+            let mut contract = contract_state_for_testing();
+            contract.constructor(init_value, owner);
+            
+            let dispatcher = ICounterDispatcher { contract_address: contract.contract_address };
+            let counter = dispatcher.get_counter();
+            assert(counter == init_value, 'Counter should be initialized with the correct value');
+        }
+
+        #[test]
+        #[feature("deprecated-starknet-consts")]
+        fn test_increase_counter() {
+            let owner = starknet::contract_address_const::<0x123>();
+            let init_value = 0;
+            
+            let mut contract = contract_state_for_testing();
+            contract.constructor(init_value, owner);
+            
+            let mut dispatcher = ICounterDispatcher { contract_address: contract.contract_address };
+            dispatcher.increase_counter();
+            
+            let counter = dispatcher.get_counter();
+            assert(counter == 1, 'Counter should be increased by 1');
+        }
+
+        #[test]
+        #[feature("deprecated-starknet-consts")]
+        fn test_decrease_counter() {
+            let owner = starknet::contract_address_const::<0x123>();
+            let init_value = 1;
+            
+            let mut contract = contract_state_for_testing();
+            contract.constructor(init_value, owner);
+            
+            let mut dispatcher = ICounterDispatcher { contract_address: contract.contract_address };
+            dispatcher.decrease_counter();
+            
+            let counter = dispatcher.get_counter();
+            assert(counter == 0, 'Counter should be decreased by 1');
+        }
+
+        #[test]
+        #[feature("deprecated-starknet-consts")]
+        fn test_decrease_counter_below_zero() {
+            let owner = starknet::contract_address_const::<0x123>();
+            let init_value = 0;
+            
+            let mut contract = contract_state_for_testing();
+            contract.constructor(init_value, owner);
+            
+            let mut dispatcher = ICounterDispatcher { contract_address: contract.contract_address };
+            let mut success = false;
+            match dispatcher.decrease_counter() {
+                Ok(_) => {},
+                Err(_) => { success = true; }
+            }
+            assert(success, 'Counter should not be able to go below zero');
+        }
+
+        #[test]
+        #[feature("deprecated-starknet-consts")]
+        fn test_reset_counter() {
+            let owner = starknet::contract_address_const::<0x123>();
+            let init_value = 42;
+            
+            let mut contract = contract_state_for_testing();
+            contract.constructor(init_value, owner);
+            
+            let mut dispatcher = ICounterDispatcher { contract_address: contract.contract_address };
+            
+            // Set caller as owner
+            start_prank(contract.contract_address, owner);
+            dispatcher.reset_counter();
+            stop_prank(contract.contract_address);
+            
+            let counter = dispatcher.get_counter();
+            assert(counter == 0, 'Counter should be reset to 0');
+        }
+
+        #[test]
+        #[feature("deprecated-starknet-consts")]
+        fn test_reset_counter_not_owner() {
+            let owner = starknet::contract_address_const::<0x123>();
+            let not_owner = starknet::contract_address_const::<0x456>();
+            let init_value = 42;
+            
+            let mut contract = contract_state_for_testing();
+            contract.constructor(init_value, owner);
+            
+            let mut dispatcher = ICounterDispatcher { contract_address: contract.contract_address };
+            
+            // Set caller as not owner
+            start_prank(contract.contract_address, not_owner);
+            let mut success = false;
+            match dispatcher.reset_counter() {
+                Ok(_) => {},
+                Err(_) => { success = true; }
+            }
+            stop_prank(contract.contract_address);
+            assert(success, 'Non-owner should not be able to reset counter');
+        }
+    }
 }
